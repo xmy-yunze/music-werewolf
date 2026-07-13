@@ -122,4 +122,38 @@ public class RoomController {
         result.put("playerName", playerName);
         return result;
     }
+    // 投票
+    @PostMapping("/vote")
+    public Map<String, Object> vote(@RequestBody Map<String, String> request) {
+        Map<String, Object> result = new HashMap<>();
+        String roomId = request.get("roomId");
+        String voterName = request.get("voterName");
+        String targetName = request.get("targetName");
+
+        boolean success = roomService.vote(roomId, voterName, targetName);
+        if (success) {
+            result.put("success", true);
+            result.put("message", "投票成功");
+        } else {
+            result.put("success", false);
+            result.put("message", "投票失败");
+        }
+        return result;
+    }
+
+    // 获取结果
+    @GetMapping("/result/{roomId}")
+    public Map<String, Object> getResult(@PathVariable(value = "roomId") String roomId) {
+        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> data = roomService.getResult(roomId);
+        if (data == null) {
+            result.put("success", false);
+            result.put("message", "未找到结果");
+            return result;
+        }
+        result.put("success", true);
+        result.put("data", data);
+        return result;
+    }
+
 }

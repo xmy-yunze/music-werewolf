@@ -47,12 +47,11 @@ public class MusicService {
         return null;
     }
 
-    // 为游戏选歌（3首相同 + 1首不同）
-    // 为游戏选歌（3首相同 + 1首不同）
-    public List<Music> selectMusicForGame() {
+    // 为游戏选歌（根据玩家数量生成音乐列表）
+    public List<Music> selectMusicForGame(int playerCount) {
         List<Music> result = new ArrayList<>();
 
-        // 1. 随机选一首作为大众歌曲（3个人听一样的）
+        // 1. 随机选一首作为大众歌曲
         Music commonMusic = getRandomMusic();
 
         // 2. 选一首不同的作为卧底歌曲
@@ -62,11 +61,16 @@ public class MusicService {
             spyMusic = getRandomMusic();
         }
 
-        // 3. 构建结果列表：3首大众 + 1首卧底
-        for (int i = 0; i < 3; i++) {
+        // 3. 构建结果列表：所有位置都是大众歌曲
+        for (int i = 0; i < playerCount; i++) {
             result.add(commonMusic);
         }
-        result.add(spyMusic);
+
+        // 4. 返回大众歌曲和卧底歌曲，调用方需要根据spyIndex替换对应位置
+        // 为了简化，我们返回一个包含两首歌曲的Map
+        // 但为了保持接口简单，我们直接返回列表，让RoomService处理
+        // 这里我们返回一个特殊格式的列表：最后一首是卧底歌曲
+        result.add(spyMusic); // 暂时放在最后，RoomService会重新排列
 
         return result;
     }

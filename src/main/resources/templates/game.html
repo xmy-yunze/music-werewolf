@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 游戏中 - 音乐狼人杀</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #fff;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+        .timer {
+            font-size: 48px;
+            font-weight: bold;
+            color: #6c63ff;
+            margin: 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+        .timer.warning { color: #ff6b6b; }
+        .music-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+        .music-title {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .music-artist {
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .bilibili-btn {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 12px 24px;
+            background: #fb7299;
+            color: #fff;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .bilibili-btn:active { transform: scale(0.97); }
+        .bilibili-btn .icon { margin-right: 8px; }
+        .status {
+            color: rgba(255,255,255,0.4);
+            font-size: 13px;
+            margin: 16px 0 8px;
+        }
+        .hint {
+            color: rgba(255,255,255,0.3);
+            font-size: 12px;
+            margin-top: 12px;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary {
+            background: #6c63ff;
+            color: #fff;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-primary:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎵 听歌识曲</h1>
+    <p style="color:rgba(255,255,255,0.4);font-size:13px;">请仔细听你的歌曲</p>
+
+    <div class="timer" id="timer">02:30</div>
+
+    <div class="music-card">
+        <div class="music-title" id="musicTitle">加载中...</div>
+        <div class="music-artist" id="musicArtist">加载中...</div>
+        <a href="#" target="_blank" class="bilibili-btn" id="bilibiliLink">
+            <span class="icon">▶</span> 去B站听歌
+        </a>
+    </div>
+
+    <p class="status" id="status">⏳ 等待所有玩家准备...</p>
+    <p class="hint">⚠️ 请勿告诉别人你的歌曲！</p>
+
+    <button class="btn btn-primary" id="voteBtn" disabled>⏳ 等待倒计时结束...</button>
+    <button class="btn btn-secondary" onclick="window.location.href='/lobby/' + roomId + '?playerName=' + encodeURIComponent(playerName)">🔄 返回房间</button>
+    <button class="btn btn-secondary" onclick="window.location.href='/'">🏠 返回大厅</button>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const pathParts = window.location.pathname.split('/');
+    const roomId = pathParts[2];
+    const playerName = decodeURIComponent(pathParts[3] || urlParams.get('playerName') || '玩家');
+    const API_BASE = 'http://localhost:8080/api/room';
+
+    let timerSeconds = 150; // 2分30秒
+    let timerInterval = null;
+    let isReady = false;
+
+    function formatTime(sec) {
+        const m = String(Math.floor(sec / 60)).padStart(2, '0');
+        const s = String(sec % 60).padStart(2, '0');
+        return m + ':' + s;
+    }
+
+    function startTimer() {
+        const timerEl = document.getElementById('timer');
+        timerInterval = setInterval(() => {
+            timerSeconds--;
+            timerEl.textContent = formatTime(timerSeconds);
+            if (timerSeconds <= 30) {
+                timerEl.classList.add('warning');
+            }
+            if (timerSeconds <= 0) {
+                clearInterval(timerInterval);
+                timerEl.textContent = '⏰ 时间到！';
+                document.getElementById('status').textContent = '📢 投票时间到！';
+                document.getElementById('voteBtn').disabled = false;
+                document.getElementById('voteBtn').textContent = '🗳️ 去投票';
+                document.getElementById('voteBtn').onclick = function() {
+                    window.location.href = '/vote/' + roomId + '/' + encodeURIComponent(playerName);
+                };
+            }
+        }, 1000);
+    }
+
+    function loadMusic() {
+    const url = API_BASE + '/bilibili/' + roomId + '/' + encodeURIComponent(playerName);
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // 显示歌曲信息
+                document.getElementById('musicTitle').textContent = data.musicTitle || '未知歌曲';
+                document.getElementById('musicArtist').textContent = data.musicArtist || '未知歌手';
+
+                // 设置B站链接
+                const link = document.getElementById('bilibiliLink');
+                const bilibiliUrl = data.bilibiliUrl;
+
+                link.innerHTML = '<span class="icon">▶</span> 去B站听歌';
+
+                if (bilibiliUrl && bilibiliUrl !== '#') {
+                    link.href = bilibiliUrl;
+                    link.target = '_blank';
+                    link.style.pointerEvents = 'auto';
+                    link.style.opacity = '1';
+                    document.getElementById('status').textContent = '🎧 已加载你的歌曲，点击上方链接听歌！';
+                } else {
+                    link.href = '#';
+                    link.style.pointerEvents = 'none';
+                    link.style.opacity = '0.5';
+                    document.getElementById('status').textContent = '❌ 未找到B站链接';
+                }
+            } else {
+                document.getElementById('status').textContent = '❌ ' + (data.message || '加载失败');
+            }
+        })
+        .catch(err => {
+            console.error('加载音乐失败:', err);
+            document.getElementById('status').textContent = '❌ 连接服务器失败';
+        });
+}
+
+    // 检查游戏状态
+    function checkGameState() {
+        fetch(API_BASE + '/info/' + roomId)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success || data.data.state !== 'PLAYING') {
+                    // 如果游戏已结束，跳转结果页
+                    window.location.href = '/result/' + roomId;
+                }
+            })
+            .catch(() => {});
+    }
+
+    // 加载音乐并开始倒计时
+    loadMusic();
+    startTimer();
+    setInterval(checkGameState, 5000);
+</script>
+</body>
+</html>

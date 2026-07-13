@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 结果 - 音乐狼人杀</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        h1 { color: #fff; font-size: 24px; margin-bottom: 4px; }
+        .subtitle { color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 24px; }
+        .result-box {
+            padding: 24px;
+            border-radius: 16px;
+            margin: 16px 0;
+        }
+        .result-box.win { background: rgba(108, 99, 255, 0.15); border: 1px solid rgba(108, 99, 255, 0.3); }
+        .result-box.lose { background: rgba(255, 107, 107, 0.15); border: 1px solid rgba(255, 107, 107, 0.3); }
+        .result-icon { font-size: 48px; margin-bottom: 8px; }
+        .result-title { color: #fff; font-size: 20px; font-weight: 600; }
+        .result-desc { color: rgba(255,255,255,0.5); font-size: 14px; margin-top: 4px; }
+        .spy-reveal {
+            margin: 16px 0;
+            padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+        }
+        .spy-reveal .label { color: rgba(255,255,255,0.3); font-size: 12px; }
+        .spy-reveal .name { color: #ff6b6b; font-size: 22px; font-weight: 600; margin-top: 4px; }
+        .vote-results {
+            margin: 16px 0;
+            text-align: left;
+        }
+        .vote-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+        }
+        .vote-item .votes { color: rgba(255,255,255,0.3); font-size: 13px; }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            margin-top: 12px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: #6c63ff; color: #fff; }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📊 游戏结束</h1>
+    <p class="subtitle" id="subtitle">结果揭晓</p>
+
+    <div class="result-box" id="resultBox">
+        <div class="result-icon" id="resultIcon">🎉</div>
+        <div class="result-title" id="resultTitle">加载中...</div>
+        <div class="result-desc" id="resultDesc"></div>
+    </div>
+
+    <div class="spy-reveal">
+        <div class="label">🕵️ 卧底</div>
+        <div class="name" id="spyName">加载中...</div>
+    </div>
+
+    <div class="vote-results" id="voteResults"></div>
+
+    <button class="btn btn-primary" onclick="window.location.href='/'">🏠 回到首页</button>
+    <button class="btn btn-secondary" onclick="window.location.reload()">🔄 刷新结果</button>
+</div>
+
+<script>
+    const roomId = window.location.pathname.split('/')[2];
+    const API_BASE = 'http://localhost:8080/api/room';
+
+    function loadResult() {
+        fetch(API_BASE + '/result/' + roomId)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    document.getElementById('resultTitle').textContent = '❌ 未找到结果';
+                    return;
+                }
+                const result = data.data;
+                document.getElementById('spyName').textContent = result.spyName || '未知';
+
+                const box = document.getElementById('resultBox');
+                const icon = document.getElementById('resultIcon');
+                const title = document.getElementById('resultTitle');
+                const desc = document.getElementById('resultDesc');
+
+                if (result.spyFound) {
+                    box.className = 'result-box win';
+                    icon.textContent = '🎉';
+                    title.textContent = '玩家胜利！';
+                    desc.textContent = '卧底被成功找出！';
+                } else {
+                    box.className = 'result-box lose';
+                    icon.textContent = '😈';
+                    title.textContent = '卧底胜利！';
+                    desc.textContent = '卧底成功逃脱！';
+                }
+
+                // 投票详情
+                const votesContainer = document.getElementById('voteResults');
+                if (result.voteStats && result.voteStats.length > 0) {
+                    votesContainer.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;margin-bottom:8px;">📊 投票统计</div>' +
+                        result.voteStats.map(v =>
+                            `<div class="vote-item"><span>${v.player}</span><span class="votes">${v.votes} 票</span></div>`
+                        ).join('');
+                } else {
+                    votesContainer.innerHTML = '';
+                }
+            })
+            .catch(() => {
+                document.getElementById('resultTitle').textContent = '❌ 服务器连接失败';
+            });
+    }
+
+    loadResult();
+</script>
+</body>
+</html>

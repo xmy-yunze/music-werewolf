@@ -7,10 +7,10 @@ import com.werewolf.musicwerewolf.model.Room;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import java.util.stream.Collectors;
 
 @Service
 public class RoomService {
@@ -69,7 +69,9 @@ public class RoomService {
         info.put("maxPlayers", room.getMaxPlayers());
         info.put("currentPlayers", room.getPlayers().size());
         info.put("isFull", room.isFull());
-        info.put("state", room.getState());
+        info.put("state", room.getState());                    // ← 加上
+        info.put("assignedMusic", room.getAssignedMusic());    // ← 加上
+        info.put("spyIndex", room.getSpyIndex());              // ← 加上
         return info;
     }
 
@@ -80,13 +82,30 @@ public class RoomService {
         if (room.getPlayers().size() < 3) return false;
         if (room.getState() != GameState.WAITING) return false;
 
-        // 选歌
-        List<Music> selectedMusic = musicService.selectMusicForGame();
-        room.setAssignedMusic(selectedMusic);
-
         // 随机指定卧底
         Random random = new Random();
-        room.setSpyIndex(random.nextInt(room.getPlayers().size()));
+        int playerCount = room.getPlayers().size();
+        int spyIndex = random.nextInt(playerCount);
+        room.setSpyIndex(spyIndex);
+
+        // 选歌
+        List<Music> selectedMusic = musicService.selectMusicForGame(playerCount);
+
+        // 重新排列音乐列表，确保spyIndex位置是卧底歌曲
+        // MusicService返回的列表格式：前playerCount首是大众歌曲，最后一首是卧底歌曲
+        Music commonMusic = selectedMusic.get(0);
+        Music spyMusic = selectedMusic.get(selectedMusic.size() - 1);
+
+        List<Music> finalMusicList = new ArrayList<>();
+        for (int i = 0; i < playerCount; i++) {
+            if (i == spyIndex) {
+                finalMusicList.add(spyMusic);
+            } else {
+                finalMusicList.add(commonMusic);
+            }
+        }
+
+        room.setAssignedMusic(finalMusicList);
 
         room.setState(GameState.PLAYING);
         return true;
@@ -100,6 +119,7 @@ public class RoomService {
         }
         return room.getState();
     }
+
     public Music getPlayerMusic(String roomId, String playerName) {
         Room room = rooms.get(roomId);
         if (room == null || room.getAssignedMusic() == null) return null;
@@ -124,5 +144,88 @@ public class RoomService {
             return players.get(spyIndex);
         }
         return null;
+    }
+
+    // 投票
+    private Map<String, Map<String, String>> votes = new HashMap<>();
+
+    public boolean vote(String roomId, String voterName, String targetName) {
+        Room room = rooms.get(roomId);
+        if (room == null) return false;
+        if (room.getState() != GameState.PLAYING && room.getState() != GameState.VOTING) return false;
+
+        // 不能投自己
+        if (voterName.equals(targetName)) return false;
+
+        // 检查玩家是否存在
+        boolean voterExists = room.getPlayers().stream().anyMatch(p -> p.getName().equals(voterName));
+        boolean targetExists = room.getPlayers().stream().anyMatch(p -> p.getName().equals(targetName));
+        if (!voterExists || !targetExists) return false;
+
+        // 记录投票
+        String key = roomId + "_" + voterName;
+        votes.put(key, Map.of("target", targetName));
+
+        // 检查是否所有人都投票了
+        long votedCount = room.getPlayers().stream()
+                .filter(p -> votes.containsKey(roomId + "_" + p.getName()))
+                .count();
+
+        if (votedCount >= room.getPlayers().size()) {
+            calculateResult(roomId);
+        }
+
+        return true;
+    }
+
+    // 计算结果
+    public Map<String, Object> calculateResult(String roomId) {
+        Room room = rooms.get(roomId);
+        if (room == null) return null;
+
+        Map<String, Integer> voteCount = new HashMap<>();
+        for (Player p : room.getPlayers()) {
+            String key = roomId + "_" + p.getName();
+            if (votes.containsKey(key)) {
+                String target = votes.get(key).get("target");
+                voteCount.put(target, voteCount.getOrDefault(target, 0) + 1);
+            }
+        }
+
+        // 找出得票最多的人
+        String mostVoted = null;
+        int maxVotes = 0;
+        for (Map.Entry<String, Integer> entry : voteCount.entrySet()) {
+            if (entry.getValue() > maxVotes) {
+                maxVotes = entry.getValue();
+                mostVoted = entry.getKey();
+            }
+        }
+
+        Player spy = getSpy(roomId);
+        boolean spyFound = mostVoted != null && mostVoted.equals(spy.getName());
+
+        room.setState(GameState.RESULT);
+
+        // 返回结果
+        Map<String, Object> result = new HashMap<>();
+        result.put("spyName", spy.getName());
+        result.put("spyFound", spyFound);
+        result.put("voteStats", voteCount.entrySet().stream()
+                .map(e -> Map.of("player", e.getKey(), "votes", e.getValue()))
+                .collect(Collectors.toList()));
+
+        return result;
+    }
+
+    public Map<String, Object> getResult(String roomId) {
+        Room room = rooms.get(roomId);
+        if (room == null) return null;
+        if (room.getState() != GameState.RESULT) {
+            // 如果还没结算，先结算
+            return calculateResult(roomId);
+        }
+        // 从缓存读取结果
+        return calculateResult(roomId);
     }
 }
