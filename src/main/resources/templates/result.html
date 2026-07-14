@@ -94,14 +94,36 @@
 
     <div class="vote-results" id="voteResults"></div>
 
-    <button class="btn btn-primary" onclick="window.location.href='/'">🏠 回到首页</button>
-    <button class="btn btn-secondary" onclick="window.location.reload()">🔄 刷新结果</button>
+    <button class="btn btn-primary" onclick="returnToRoom()">🔄 返回房间</button>
+    <button class="btn btn-secondary" onclick="window.location.href='/'">🚪 退出房间</button>
 </div>
 
 <script>
     const roomId = window.location.pathname.split('/')[2];
+    const playerName = new URLSearchParams(window.location.search).get('playerName') || '玩家';
     const API_BASE = 'http://localhost:8080/api/room';
 
+    function showToast(msg) {
+        // 创建 toast 元素
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;z-index:1000;';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => document.body.removeChild(toast), 2500);
+    }
+
+    function returnToRoom() {
+        fetch(API_BASE + '/reset/' + roomId, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/lobby/' + roomId + '?playerName=' + encodeURIComponent(playerName);
+                } else {
+                    showToast('重置失败：' + data.message);
+                }
+            })
+            .catch(() => showToast('服务器连接失败'));
+    }
     function loadResult() {
         fetch(API_BASE + '/result/' + roomId)
             .then(res => res.json())

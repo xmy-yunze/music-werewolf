@@ -160,6 +160,7 @@
 
     <button class="btn btn-primary" id="startBtn" onclick="startGame()">🎮 开始游戏</button>
     <button class="btn btn-secondary" onclick="copyRoomId()">📋 复制房间号</button>
+    <button class="btn btn-secondary" id="returnLobbyBtn" onclick="window.location.href='/'">🏠 返回大厅</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -233,6 +234,13 @@
                         window.location.href = '/game/' + roomId + '/' + encodeURIComponent(playerName);
                     }, 1500);
                     return;
+                }
+                // 控制返回大厅按钮的显示
+                const returnLobbyBtn = document.getElementById('returnLobbyBtn');
+                if (room.state === 'PLAYING') {
+                    returnLobbyBtn.style.display = 'none';
+                } else {
+                    returnLobbyBtn.style.display = 'block';
                 }
 
                 if (isHost) {

@@ -4,7 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -16,6 +18,9 @@ public class Room {
     private GameState state = GameState.WAITING;
     private List<Music> assignedMusic;
     private int spyIndex = -1;
+    private Long gameStartTime;  // 游戏开始的时间戳（毫秒）
+    private int gameDuration = 150;  // 游戏时长（秒），默认2分30秒
+    private Map<String, Boolean> voteStatus = new HashMap<>();  // 记录谁已经投票
 
     public Room() {
         this.players = new ArrayList<>();
@@ -27,6 +32,7 @@ public class Room {
         this.players = new ArrayList<>();
         // 房主自动加入房间
         this.players.add(new Player(hostName, roomId));
+        this.voteStatus = new HashMap<>();
     }
 
     // 判断房间是否已满
@@ -48,4 +54,5 @@ public class Room {
         players.add(player);
         return true;
     }
+
 }

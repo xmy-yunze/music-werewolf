@@ -1,5 +1,6 @@
 package com.werewolf.musicwerewolf.controller;
 
+import com.werewolf.musicwerewolf.model.GameState;
 import com.werewolf.musicwerewolf.model.Music;
 import com.werewolf.musicwerewolf.model.Room;
 import com.werewolf.musicwerewolf.service.RoomService;
@@ -75,6 +76,7 @@ public class RoomController {
         result.put("data", info);
         return result;
     }
+
     // 开始游戏
     @PostMapping("/start/{roomId}")
     public Map<String, Object> startGame(@PathVariable(value = "roomId") String roomId) {
@@ -90,6 +92,7 @@ public class RoomController {
         }
         return result;
     }
+
     // 获取B站音乐链接
     @GetMapping("/bilibili/{roomId}/{playerName}")
     public Map<String, Object> getBilibiliMusic(
@@ -122,6 +125,46 @@ public class RoomController {
         result.put("playerName", playerName);
         return result;
     }
+
+    // 获取游戏剩余时间
+    @GetMapping("/time/{roomId}")
+    public Map<String, Object> getRemainingTime(@PathVariable(value = "roomId") String roomId) {
+        Map<String, Object> result = new HashMap<>();
+        Room room = roomService.getRoom(roomId);
+        if (room == null) {
+            result.put("success", false);
+            result.put("message", "房间不存在");
+            return result;
+        }
+
+        Long startTime = room.getGameStartTime();
+        if (startTime == null) {
+            result.put("success", false);
+            result.put("message", "游戏未开始");
+            return result;
+        }
+
+        int duration = room.getGameDuration();
+        long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+        long remaining = duration - elapsed;
+
+        if (remaining <= 0) {
+            // 时间到，切换到投票状态
+            if (room.getState() == GameState.PLAYING) {
+                room.setState(GameState.VOTING);
+            }
+            result.put("success", true);
+            result.put("remaining", 0);
+            result.put("state", "VOTING");
+        } else {
+            result.put("success", true);
+            result.put("remaining", remaining);
+            result.put("state", room.getState().toString());
+        }
+
+        return result;
+    }
+
     // 投票
     @PostMapping("/vote")
     public Map<String, Object> vote(@RequestBody Map<String, String> request) {
@@ -153,6 +196,34 @@ public class RoomController {
         }
         result.put("success", true);
         result.put("data", data);
+        return result;
+    }
+    // 获取投票进度
+    @GetMapping("/vote-progress/{roomId}")
+    public Map<String, Object> getVoteProgress(@PathVariable(value = "roomId") String roomId) {
+        Map<String, Object> result = new HashMap<>();
+        Map<String, Object> data = roomService.getVoteProgress(roomId);
+        if (data == null) {
+            result.put("success", false);
+            result.put("message", "房间不存在");
+            return result;
+        }
+        result.put("success", true);
+        result.put("data", data);
+        return result;
+    }
+    // 重置游戏状态
+    @PostMapping("/reset/{roomId}")
+    public Map<String, Object> resetGame(@PathVariable(value = "roomId") String roomId) {
+        Map<String, Object> result = new HashMap<>();
+        boolean success = roomService.resetGame(roomId);
+        if (success) {
+            result.put("success", true);
+            result.put("message", "游戏已重置");
+        } else {
+            result.put("success", false);
+            result.put("message", "房间不存在");
+        }
         return result;
     }
 

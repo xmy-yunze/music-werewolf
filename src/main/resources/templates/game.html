@@ -119,8 +119,6 @@
     <p class="hint">⚠️ 请勿告诉别人你的歌曲！</p>
 
     <button class="btn btn-primary" id="voteBtn" disabled>⏳ 等待倒计时结束...</button>
-    <button class="btn btn-secondary" onclick="window.location.href='/lobby/' + roomId + '?playerName=' + encodeURIComponent(playerName)">🔄 返回房间</button>
-    <button class="btn btn-secondary" onclick="window.location.href='/'">🏠 返回大厅</button>
 </div>
 
 <script>
@@ -130,7 +128,6 @@
     const playerName = decodeURIComponent(pathParts[3] || urlParams.get('playerName') || '玩家');
     const API_BASE = 'http://localhost:8080/api/room';
 
-    let timerSeconds = 150; // 2分30秒
     let timerInterval = null;
     let isReady = false;
 
@@ -140,65 +137,80 @@
         return m + ':' + s;
     }
 
-    function startTimer() {
-        const timerEl = document.getElementById('timer');
-        timerInterval = setInterval(() => {
-            timerSeconds--;
-            timerEl.textContent = formatTime(timerSeconds);
-            if (timerSeconds <= 30) {
-                timerEl.classList.add('warning');
-            }
-            if (timerSeconds <= 0) {
-                clearInterval(timerInterval);
-                timerEl.textContent = '⏰ 时间到！';
-                document.getElementById('status').textContent = '📢 投票时间到！';
-                document.getElementById('voteBtn').disabled = false;
-                document.getElementById('voteBtn').textContent = '🗳️ 去投票';
-                document.getElementById('voteBtn').onclick = function() {
-                    window.location.href = '/vote/' + roomId + '/' + encodeURIComponent(playerName);
-                };
-            }
-        }, 1000);
-    }
 
     function loadMusic() {
-    const url = API_BASE + '/bilibili/' + roomId + '/' + encodeURIComponent(playerName);
+        const url = API_BASE + '/bilibili/' + roomId + '/' + encodeURIComponent(playerName);
 
-    fetch(url)
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                // 显示歌曲信息
-                document.getElementById('musicTitle').textContent = data.musicTitle || '未知歌曲';
-                document.getElementById('musicArtist').textContent = data.musicArtist || '未知歌手';
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // 显示歌曲信息
+                    document.getElementById('musicTitle').textContent = data.musicTitle || '未知歌曲';
+                    document.getElementById('musicArtist').textContent = data.musicArtist || '未知歌手';
 
-                // 设置B站链接
-                const link = document.getElementById('bilibiliLink');
-                const bilibiliUrl = data.bilibiliUrl;
+                    // 设置B站链接
+                    const link = document.getElementById('bilibiliLink');
+                    const bilibiliUrl = data.bilibiliUrl;
 
-                link.innerHTML = '<span class="icon">▶</span> 去B站听歌';
+                    link.innerHTML = '<span class="icon">▶</span> 去B站听歌';
 
-                if (bilibiliUrl && bilibiliUrl !== '#') {
-                    link.href = bilibiliUrl;
-                    link.target = '_blank';
-                    link.style.pointerEvents = 'auto';
-                    link.style.opacity = '1';
-                    document.getElementById('status').textContent = '🎧 已加载你的歌曲，点击上方链接听歌！';
+                    if (bilibiliUrl && bilibiliUrl !== '#') {
+                        link.href = bilibiliUrl;
+                        link.target = '_blank';
+                        link.style.pointerEvents = 'auto';
+                        link.style.opacity = '1';
+                        document.getElementById('status').textContent = '🎧 已加载你的歌曲，点击上方链接听歌！';
+                    } else {
+                        link.href = '#';
+                        link.style.pointerEvents = 'none';
+                        link.style.opacity = '0.5';
+                        document.getElementById('status').textContent = '❌ 未找到B站链接';
+                    }
                 } else {
-                    link.href = '#';
-                    link.style.pointerEvents = 'none';
-                    link.style.opacity = '0.5';
-                    document.getElementById('status').textContent = '❌ 未找到B站链接';
+                    document.getElementById('status').textContent = '❌ ' + (data.message || '加载失败');
                 }
-            } else {
-                document.getElementById('status').textContent = '❌ ' + (data.message || '加载失败');
-            }
-        })
-        .catch(err => {
-            console.error('加载音乐失败:', err);
-            document.getElementById('status').textContent = '❌ 连接服务器失败';
-        });
-}
+            })
+            .catch(err => {
+                console.error('加载音乐失败:', err);
+                document.getElementById('status').textContent = '❌ 连接服务器失败';
+            });
+    }
+    function updateTimer() {
+        fetch(API_BASE + '/time/' + roomId)
+            .then(res => res.json())
+            .then(data => {
+                console.log('倒计时数据:', data);
+                if (data.success) {
+                    const remaining = data.remaining;
+                    const timerEl = document.getElementById('timer');
+
+                    // 直接用 formatTime 格式化
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = remaining % 60;
+                    const formatted = String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+                    timerEl.textContent = formatted;
+
+                    console.log('显示时间:', formatted);  // 调试日志
+
+                    if (remaining <= 0) {
+                        clearInterval(timerInterval);
+                        timerEl.textContent = '⏰ 时间到！';
+                        document.getElementById('status').textContent = '📢 投票时间到！';
+                        document.getElementById('voteBtn').disabled = false;
+                        document.getElementById('voteBtn').textContent = '🗳️ 去投票';
+                        document.getElementById('voteBtn').onclick = function() {
+                            window.location.href = '/vote/' + roomId + '/' + encodeURIComponent(playerName);
+                        };
+                    } else if (remaining <= 30) {
+                        timerEl.classList.add('warning');
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('获取倒计时失败:', err);
+            });
+    }
 
     // 检查游戏状态
     function checkGameState() {
@@ -215,7 +227,8 @@
 
     // 加载音乐并开始倒计时
     loadMusic();
-    startTimer();
+    updateTimer();  // 初始化倒计时
+    setInterval(updateTimer, 1000);  // 每秒更新倒计时
     setInterval(checkGameState, 5000);
 </script>
 </body>

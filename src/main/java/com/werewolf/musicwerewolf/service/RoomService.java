@@ -106,7 +106,15 @@ public class RoomService {
         }
 
         room.setAssignedMusic(finalMusicList);
-
+        room.setGameStartTime(System.currentTimeMillis());
+        room.getVoteStatus().clear();
+        votes.entrySet().removeIf(entry -> entry.getKey().startsWith(roomId + "_"));  // 添加这一行
+        for (Player p : room.getPlayers()) {
+            room.getVoteStatus().put(p.getName(), false);
+        }
+        for (Player p : room.getPlayers()) {
+            room.getVoteStatus().put(p.getName(), false);
+        }
         room.setState(GameState.PLAYING);
         return true;
     }
@@ -166,12 +174,14 @@ public class RoomService {
         String key = roomId + "_" + voterName;
         votes.put(key, Map.of("target", targetName));
 
-        // 检查是否所有人都投票了
-        long votedCount = room.getPlayers().stream()
-                .filter(p -> votes.containsKey(roomId + "_" + p.getName()))
-                .count();
+        // 标记该玩家已投票
+        room.getVoteStatus().put(voterName, true);
 
-        if (votedCount >= room.getPlayers().size()) {
+        // 检查是否所有玩家都已投票
+        boolean allVoted = room.getPlayers().stream()
+                .allMatch(p -> room.getVoteStatus().getOrDefault(p.getName(), false));
+
+        if (allVoted) {
             calculateResult(roomId);
         }
 
@@ -222,10 +232,38 @@ public class RoomService {
         Room room = rooms.get(roomId);
         if (room == null) return null;
         if (room.getState() != GameState.RESULT) {
-            // 如果还没结算，先结算
-            return calculateResult(roomId);
+            return null; // 如果还没结算，返回null而不是强制计算
         }
         // 从缓存读取结果
         return calculateResult(roomId);
+    }
+    // 获取投票进度
+    public Map<String, Object> getVoteProgress(String roomId) {
+        Room room = rooms.get(roomId);
+        if (room == null) return null;
+
+        int totalPlayers = room.getPlayers().size();
+        int votedCount = (int) room.getVoteStatus().values().stream().filter(v -> v).count();
+        boolean allVoted = votedCount == totalPlayers;
+
+        Map<String, Object> progress = new HashMap<>();
+        progress.put("totalPlayers", totalPlayers);
+        progress.put("votedCount", votedCount);
+        progress.put("allVoted", allVoted);
+        progress.put("voteStatus", room.getVoteStatus());
+        return progress;
+    }
+    // 重置房间游戏状态（用于开始下一局）
+    public boolean resetGame(String roomId) {
+        Room room = rooms.get(roomId);
+        if (room == null) return false;
+
+        room.setState(GameState.WAITING);
+        room.setAssignedMusic(null);
+        room.setSpyIndex(-1);
+        room.setGameStartTime(null);
+        room.getVoteStatus().clear();
+
+        return true;
     }
 }
