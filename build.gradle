@@ -10,7 +10,9 @@ version = '0.0.1-SNAPSHOT'
 java {
     sourceCompatibility = '17'
 }
-
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add('-parameters')
+}
 configurations {
     compileOnly {
         extendsFrom annotationProcessor

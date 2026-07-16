@@ -21,7 +21,7 @@ public class PageController {
     }
 
     @GetMapping("/lobby/{roomId}")
-    public String lobby(@PathVariable String roomId, Model model) {
+    public String lobby(@PathVariable("roomId") String roomId, Model model) {
         Room room = roomService.getRoom(roomId);
         if (room == null) {
             return "redirect:/";
@@ -32,8 +32,8 @@ public class PageController {
     }
 
     @GetMapping("/game/{roomId}/{playerName}")
-    public String game(@PathVariable String roomId,
-                       @PathVariable String playerName,
+    public String game(@PathVariable("roomId") String roomId,
+                       @PathVariable("playerName") String playerName,
                        Model model) {
         model.addAttribute("roomId", roomId);
         model.addAttribute("playerName", playerName);
@@ -41,8 +41,8 @@ public class PageController {
     }
 
     @GetMapping("/vote/{roomId}/{playerName}")
-    public String vote(@PathVariable String roomId,
-                       @PathVariable String playerName,
+    public String vote(@PathVariable("roomId") String roomId,
+                       @PathVariable("playerName") String playerName,
                        Model model) {
         model.addAttribute("roomId", roomId);
         model.addAttribute("playerName", playerName);
@@ -51,7 +51,7 @@ public class PageController {
 
     // ========== 新增：结果页面 ==========
     @GetMapping("/result/{roomId}")
-    public String result(@PathVariable String roomId, Model model) {
+    public String result(@PathVariable("roomId") String roomId, Model model) {
         model.addAttribute("roomId", roomId);
         return "result";
     }
