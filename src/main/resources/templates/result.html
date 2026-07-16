@@ -95,7 +95,7 @@
     <div class="vote-results" id="voteResults"></div>
 
     <button class="btn btn-primary" onclick="returnToRoom()">🔄 返回房间</button>
-    <button class="btn btn-secondary" onclick="window.location.href='/'">🚪 退出房间</button>
+    <button class="btn btn-secondary" onclick="leaveRoom()">🚪 退出房间</button>
 </div>
 
 <script>
@@ -123,6 +123,22 @@
                 }
             })
             .catch(() => showToast('服务器连接失败'));
+    }
+    function leaveRoom() {
+        if (!confirm('确定要退出房间吗？')) return;
+
+        fetch(API_BASE + '/leave?roomId=' + roomId + '&playerName=' + encodeURIComponent(playerName), {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '/';
+            } else {
+                showToast(data.message || '退出失败');
+            }
+        })
+        .catch(() => showToast('服务器连接失败'));
     }
     function loadResult() {
         fetch(API_BASE + '/result/' + roomId)

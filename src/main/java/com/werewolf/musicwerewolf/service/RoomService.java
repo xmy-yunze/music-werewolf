@@ -56,6 +56,27 @@ public class RoomService {
         return room.addPlayer(player);
     }
 
+    // 玩家退出房间
+    public boolean leaveRoom(String roomId, String playerName) {
+        Room room = rooms.get(roomId);
+        if (room == null) {
+            return false;
+        }
+
+        // 先检查是否是房主
+        boolean isHost = room.getHostName().equals(playerName);
+
+        // 先移除玩家
+        boolean removed = room.removePlayer(playerName);
+
+        // 如果移除的是房主且房间还有玩家，转移房主权限
+        if (isHost && removed && !room.getPlayers().isEmpty()) {
+            room.setHostName(room.getPlayers().get(0).getName());
+        }
+
+        return removed;
+    }
+
     // 获取房间所有玩家
     public Map<String, Object> getRoomInfo(String roomId) {
         Room room = rooms.get(roomId);
@@ -237,6 +258,7 @@ public class RoomService {
         // 从缓存读取结果
         return calculateResult(roomId);
     }
+
     // 获取投票进度
     public Map<String, Object> getVoteProgress(String roomId) {
         Room room = rooms.get(roomId);
@@ -253,6 +275,7 @@ public class RoomService {
         progress.put("voteStatus", room.getVoteStatus());
         return progress;
     }
+
     // 重置房间游戏状态（用于开始下一局）
     public boolean resetGame(String roomId) {
         Room room = rooms.get(roomId);

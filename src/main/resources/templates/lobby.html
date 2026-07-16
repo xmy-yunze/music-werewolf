@@ -160,7 +160,8 @@
 
     <button class="btn btn-primary" id="startBtn" onclick="startGame()">🎮 开始游戏</button>
     <button class="btn btn-secondary" onclick="copyRoomId()">📋 复制房间号</button>
-    <button class="btn btn-secondary" id="returnLobbyBtn" onclick="window.location.href='/'">🏠 返回大厅</button>
+<!--    <button class="btn btn-secondary" id="returnLobbyBtn" onclick="window.location.href='/'">🏠 返回大厅</button>-->
+    <button class="btn btn-secondary" onclick="leaveRoom()">🚪 退出房间</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -224,6 +225,25 @@
 
                 const startBtn = document.getElementById('startBtn');
                 const statusMsg = document.getElementById('statusMessage');
+                if (room.state === 'PLAYING') {
+                    // 检查当前玩家是否在房间中
+                    const playerInRoom = room.players.some(p => p.name === playerName);
+
+                    if (playerInRoom) {
+                        startBtn.disabled = true;
+                        startBtn.textContent = '⏳ 游戏进行中...';
+                        statusMsg.textContent = '游戏已开始！';
+                        setTimeout(() => {
+                            window.location.href = '/game/' + roomId + '/' + encodeURIComponent(playerName);
+                        }, 1500);
+                    } else {
+                        // 玩家不在房间中，提示重新加入
+                        startBtn.disabled = true;
+                        startBtn.textContent = '❌ 你已不在房间中';
+                        statusMsg.textContent = '请刷新页面或返回大厅重新加入';
+                    }
+                    return;
+                }
 
                 if (room.state === 'PLAYING') {
                     startBtn.disabled = true;
@@ -236,12 +256,12 @@
                     return;
                 }
                 // 控制返回大厅按钮的显示
-                const returnLobbyBtn = document.getElementById('returnLobbyBtn');
-                if (room.state === 'PLAYING') {
-                    returnLobbyBtn.style.display = 'none';
-                } else {
-                    returnLobbyBtn.style.display = 'block';
-                }
+<!--                const returnLobbyBtn = document.getElementById('returnLobbyBtn');-->
+<!--                if (room.state === 'PLAYING') {-->
+<!--                    returnLobbyBtn.style.display = 'none';-->
+<!--                } else {-->
+<!--                    returnLobbyBtn.style.display = 'block';-->
+<!--                }-->
 
                 if (isHost) {
                     startBtn.disabled = false;
@@ -289,6 +309,23 @@
             fallbackCopy(id);
         }
     }
+
+    function leaveRoom() {
+    if (!confirm('确定要退出房间吗？')) return;
+
+    fetch(API_BASE + '/leave?roomId=' + roomId + '&playerName=' + encodeURIComponent(playerName), {
+        method: 'POST'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/';
+        } else {
+            showToast(data.message || '退出失败');
+        }
+    })
+    .catch(() => showToast('服务器连接失败'));
+}
 
     function fallbackCopy(text) {
         const input = document.createElement('input');

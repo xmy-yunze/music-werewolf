@@ -54,5 +54,15 @@ public class Room {
         players.add(player);
         return true;
     }
+    // 移除玩家
+    public boolean removePlayer(String playerName) {
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).getName().equals(playerName)) {
+                players.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
 
 }

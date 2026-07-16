@@ -62,6 +62,22 @@ public class RoomController {
         return result;
     }
 
+    // 退出房间
+    @PostMapping("/leave")
+    public Map<String, Object> leaveRoom(@RequestParam(value = "roomId", required = true) String roomId,
+                                         @RequestParam(value = "playerName", required = true) String playerName) {
+        Map<String, Object> result = new HashMap<>();
+        boolean success = roomService.leaveRoom(roomId, playerName);
+        if (success) {
+            result.put("success", true);
+            result.put("message", "已退出房间");
+        } else {
+            result.put("success", false);
+            result.put("message", "退出失败，房间不存在或玩家不在房间中");
+        }
+        return result;
+    }
+
     // 查看房间信息
     @GetMapping("/info/{roomId}")
     public Map<String, Object> getRoomInfo(@PathVariable(value = "roomId") String roomId) {
@@ -198,6 +214,7 @@ public class RoomController {
         result.put("data", data);
         return result;
     }
+
     // 获取投票进度
     @GetMapping("/vote-progress/{roomId}")
     public Map<String, Object> getVoteProgress(@PathVariable(value = "roomId") String roomId) {
@@ -212,6 +229,7 @@ public class RoomController {
         result.put("data", data);
         return result;
     }
+
     // 重置游戏状态
     @PostMapping("/reset/{roomId}")
     public Map<String, Object> resetGame(@PathVariable(value = "roomId") String roomId) {
