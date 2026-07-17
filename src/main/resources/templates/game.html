@@ -217,7 +217,7 @@
         fetch(API_BASE + '/info/' + roomId)
             .then(res => res.json())
             .then(data => {
-                if (!data.success || data.data.state !== 'PLAYING') {
+                if (!data.success || data.data.state === 'RESULT') {
                     // 如果游戏已结束，跳转结果页
                     window.location.href = '/result/' + roomId;
                 }

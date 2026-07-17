@@ -14,7 +14,7 @@ public class Room {
     private String roomId;           // 房间号（6位）
     private String hostName;         // 房主名字
     private List<Player> players;    // 玩家列表
-    private int maxPlayers = 4;      // 最大人数（先固定4人）
+    private int maxPlayers = 10;      // 最大人数（先固定4人）
     private GameState state = GameState.WAITING;
     private List<Music> assignedMusic;
     private int spyIndex = -1;
