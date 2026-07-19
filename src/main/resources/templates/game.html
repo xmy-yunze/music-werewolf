@@ -126,7 +126,7 @@
     const pathParts = window.location.pathname.split('/');
     const roomId = pathParts[2];
     const playerName = decodeURIComponent(pathParts[3] || urlParams.get('playerName') || '玩家');
-    const API_BASE = 'http://localhost:8080/api/room';
+    const API_BASE = '/api/room';
 
     let timerInterval = null;
     let isReady = false;

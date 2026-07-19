@@ -101,7 +101,7 @@
 <script>
     const roomId = window.location.pathname.split('/')[2];
     const playerName = new URLSearchParams(window.location.search).get('playerName') || '玩家';
-    const API_BASE = 'http://localhost:8080/api/room';
+    const API_BASE = '/api/room';
 
     function showToast(msg) {
         // 创建 toast 元素
