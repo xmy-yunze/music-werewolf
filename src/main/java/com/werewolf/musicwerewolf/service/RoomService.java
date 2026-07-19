@@ -223,19 +223,19 @@ public class RoomService {
             }
         }
 
-        // 找出得票最多的人
-        String mostVoted = null;
-        int maxVotes = 0;
+        Player spy = getSpy(roomId);
+        int spyVotes = voteCount.getOrDefault(spy.getName(), 0);
+
+        // 找出非卧底玩家的最高得票数
+        int maxOtherVotes = 0;
         for (Map.Entry<String, Integer> entry : voteCount.entrySet()) {
-            if (entry.getValue() > maxVotes) {
-                maxVotes = entry.getValue();
-                mostVoted = entry.getKey();
+            if (!entry.getKey().equals(spy.getName()) && entry.getValue() > maxOtherVotes) {
+                maxOtherVotes = entry.getValue();
             }
         }
 
-        Player spy = getSpy(roomId);
-        boolean spyFound = mostVoted != null && mostVoted.equals(spy.getName());
-
+        // 只有卧底得票数严格大于其他玩家最高得票数时，才算卧底被发现
+        boolean spyFound = spyVotes > maxOtherVotes;
         room.setState(GameState.RESULT);
 
         // 返回结果
